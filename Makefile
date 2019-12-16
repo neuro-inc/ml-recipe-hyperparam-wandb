@@ -30,6 +30,8 @@ CUSTOM_ENV_NAME?=image:neuromation-$(PROJECT_POSTFIX)
 
 ##### VARIABLES YOU MAY WANT TO MODIFY #####
 
+N_HYPERPARAMETER_JOBS?=4
+
 # Location of your dataset on the platform storage. Example:
 # DATA_DIR_STORAGE?=storage:datasets/cifar10
 DATA_DIR_STORAGE?=$(PROJECT_PATH_STORAGE)/$(DATA_DIR)
@@ -43,8 +45,7 @@ PRESET?=gpu-small
 HTTP_AUTH?=--http-auth
 
 # Command to run training inside the environment. Example:
-# TRAINING_COMMAND="bash -c 'cd $(PROJECT_PATH_ENV) && python -u $(CODE_DIR)/train.py --data $(DATA_DIR)'"
-TRAINING_COMMAND?='echo "Replace this placeholder with a training script execution"'
+TRAINING_COMMAND="bash -c 'cd $(PROJECT_PATH_ENV) && python -u $(CODE_DIR)/train.py'"
 
 LOCAL_PORT?=2211
 
@@ -245,6 +246,15 @@ train: _check_setup upload-code upload-config   ### Run a training job
 		$(CUSTOM_ENV_NAME) \
 		$(TRAINING_COMMAND)
 
+.PHONY: hyper_train
+hyper_train:    ### N_HYPERPARAMETER_JOBS
+	SWEEP_ID=$(python sweep_init.py); \
+	echo $(SWEEP_ID); \
+	for i_job in $$(seq 1 $(N_HYPERPARAMETER_JOBS)); do \
+        echo "Starting thread #" $$i_job ; \
+        echo $(SWEEP_ID); \
+    done
+
 .PHONY: kill-train
 kill-train: _check_setup  ### Terminate the training job
 	$(NEURO) kill $(TRAINING_JOB)
@@ -330,4 +340,4 @@ lint: _check_setup  ### Run static code analysis locally
 
 .PHONY: ps
 ps: _check_setup  ### List all running and pending jobs
-	$(NEURO) ps
+	$(NEURO) ps;
