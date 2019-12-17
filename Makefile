@@ -30,14 +30,14 @@ CUSTOM_ENV_NAME?=image:neuromation-$(PROJECT_POSTFIX)
 
 ##### VARIABLES YOU MAY WANT TO MODIFY #####
 
-N_HYPERPARAMETER_JOBS?=4
+N_HYPERPARAMETER_JOBS?=2
 
 # Location of your dataset on the platform storage. Example:
 # DATA_DIR_STORAGE?=storage:datasets/cifar10
 DATA_DIR_STORAGE?=$(PROJECT_PATH_STORAGE)/$(DATA_DIR)
 
 # The type of the training machine (run `neuro config show` to see the list of available types).
-PRESET?=gpu-small
+PRESET?=cpu-small
 
 # HTTP authentication (via cookies) for the job's HTTP link.
 # Set `HTTP_AUTH?=--no-http-auth` to disable any authentication.
@@ -45,6 +45,8 @@ PRESET?=gpu-small
 HTTP_AUTH?=--http-auth
 
 # Command to run training inside the environment. Example:
+# --no-wait-start / -wait-start
+WAITING_TRAINING_JOB_START=--wait-start
 TRAINING_COMMAND="bash -c 'cd $(PROJECT_PATH_ENV) && python -u $(CODE_DIR)/train.py'"
 
 LOCAL_PORT?=2211
@@ -232,6 +234,7 @@ kill-develop:  ### Terminate the development job
 .PHONY: train
 train: _check_setup upload-code upload-config   ### Run a training job
 	$(NEURO) run \
+	    $(WAITING_TRAINING_JOB_START) \
 		--name $(TRAINING_JOB) \
 		--preset $(PRESET) \
 		--volume $(DATA_DIR_STORAGE):$(PROJECT_PATH_ENV)/$(DATA_DIR):ro \
@@ -246,18 +249,26 @@ train: _check_setup upload-code upload-config   ### Run a training job
 		$(CUSTOM_ENV_NAME) \
 		$(TRAINING_COMMAND)
 
-.PHONY: hyper_train
-hyper_train:    ### N_HYPERPARAMETER_JOBS
-	SWEEP_ID=$(python sweep_init.py); \
-	echo $(SWEEP_ID); \
-	for i_job in $$(seq 1 $(N_HYPERPARAMETER_JOBS)); do \
-        echo "Starting thread #" $$i_job ; \
-        echo $(SWEEP_ID); \
+.PHONY: hyper-train
+hyper-train:    ### Run jobs in parallel for hyperparameters search using W&B
+	SWEEP_ID="$(shell wandb sweep sweep.yaml | grep 'sweep with ID' | cut -d' ' -f5)" ; \
+	for i_job in $$(seq 1 $(N_HYPERPARAMETER_JOBS)) ; do \
+        echo "Starting job #" $$i_job ; \
+        make train \
+            TRAINING_COMMAND="wandb agent $$SWEEP_ID" \
+            TRAINING_JOB=$(TRAINING_JOB)-$$i_job \
+            WAITING_TRAINING_JOB_START=--no-wait-start ; \
     done
 
 .PHONY: kill-train
 kill-train: _check_setup  ### Terminate the training job
 	$(NEURO) kill $(TRAINING_JOB)
+
+.PHONY: kill-hyper-train
+kill-hyper-train:  ### Terminate jobs runned for hyper parameters search
+	for i_job in $$(seq 1 $(N_HYPERPARAMETER_JOBS)) ; do \
+	    make kill-train TRAINING_JOB=$(TRAINING_JOB)-$$i_job ; \
+	done
 
 .PHONY: connect-train
 connect-train: _check_setup  ### Connect to the remote shell running on the training job
@@ -323,7 +334,7 @@ kill-filebrowser: _check_setup  ### Terminate the job with File Browser
 	$(NEURO) kill $(FILEBROWSER_JOB)
 
 .PHONY: kill-all
-kill-all: kill-train kill-jupyter kill-tensorboard kill-filebrowser  ### Terminate all jobs of this project
+kill-all: kill-train kill-hyper-train kill-jupyter kill-tensorboard kill-filebrowser  ### Terminate all jobs of this project
 
 ##### LOCAL #####
 
