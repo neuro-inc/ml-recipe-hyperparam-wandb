@@ -30,7 +30,7 @@ CUSTOM_ENV_NAME?=image:neuromation-$(PROJECT_POSTFIX)
 
 ##### VARIABLES YOU MAY WANT TO MODIFY #####
 
-N_HYPERPARAMETER_JOBS?=1
+N_HYPERPARAMETER_JOBS?=3
 
 # Location of your dataset on the platform storage. Example:
 # DATA_DIR_STORAGE?=storage:datasets/cifar10
@@ -265,7 +265,7 @@ hyper-train: _check_setup    ### Run jobs in parallel for hyperparameters search
         make train \
             TRAINING_COMMAND="\"bash -c 'cd $(PROJECT_PATH_ENV)/$(CODE_DIR) && wandb agent $$SWEEP_ID'\"" \
             TRAINING_JOB=$(TRAINING_JOB)-$$i_job \
-            WAITING_TRAINING_JOB_START=--wait-start \
+            WAITING_TRAINING_JOB_START=--no-wait-start \
             RESULTS_DIR_STORAGE=$$SWEEP_RESULTS_DIR_STORAGE; \
     done
 

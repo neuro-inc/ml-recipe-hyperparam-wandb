@@ -16,10 +16,8 @@ from torch.utils.data import DataLoader
 from torchvision.datasets import CIFAR10
 from torchvision.models import resnet18
 
-cur_time = str(datetime.now()).replace(' ', '_')
-
 DATA_PATH = Path(__file__).parent.parent / 'data'
-LOG_DIR = Path(__file__).parent.parent / 'results' / f'logs_{cur_time}'
+LOG_DIR = Path(__file__).parent.parent / 'results'
 
 
 def get_imagenet_transforms() -> t.Compose:
@@ -63,7 +61,9 @@ class CifarResnet18(nn.Module):
 
 
 def main(args: Namespace) -> None:
-    args.logdir.mkdir(exist_ok=True, parents=True)
+    cur_time = str(datetime.now()).replace(' ', '_')
+    logdir = args.logdir / f'logs_{cur_time}'
+    logdir.mkdir(exist_ok=True, parents=True)
 
     cifar_args = {'transform': get_imagenet_transforms(),
                   'root': DATA_PATH, 'download': True}
@@ -97,7 +97,7 @@ def main(args: Namespace) -> None:
     ]
     runner.train(model=model, criterion=criterion, optimizer=optimizer,
                  loaders=OrderedDict([('train', train_loader), ('valid', test_loader)]),
-                 logdir=args.logdir, num_epochs=args.n_epoch, verbose=True,
+                 logdir=logdir, num_epochs=args.n_epoch, verbose=True,
                  main_metric='accuracy01', valid_loader='valid', minimize_metric=False,
                  monitoring_params={'project': 'neuro_hyper'}, callbacks=callbacks
                  )
