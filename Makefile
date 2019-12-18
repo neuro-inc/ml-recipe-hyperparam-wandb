@@ -263,7 +263,7 @@ hyper-train: _check_setup    ### Run jobs in parallel for hyperparameters search
 	for i_job in $$(seq 1 $(N_HYPERPARAMETER_JOBS)) ; do \
         echo "Starting job #"$$i_job ; \
         make train \
-            TRAINING_COMMAND="bash -c 'cd $(PROJECT_PATH_ENV)/$(CODE_DIR) && wandb agent $$SWEEP_ID'" \
+            TRAINING_COMMAND="\"bash -c 'cd $(PROJECT_PATH_ENV)/$(CODE_DIR) && wandb agent $$SWEEP_ID'\"" \
             TRAINING_JOB=$(TRAINING_JOB)-$$i_job \
             WAITING_TRAINING_JOB_START=--wait-start \
             RESULTS_DIR_STORAGE=$$SWEEP_RESULTS_DIR_STORAGE; \

@@ -63,7 +63,7 @@ class CifarResnet18(nn.Module):
 
 
 def main(args: Namespace) -> None:
-    args.logdir.mkdir(exist_ok=True)
+    args.logdir.mkdir(exist_ok=True, parents=True)
 
     cifar_args = {'transform': get_imagenet_transforms(),
                   'root': DATA_PATH, 'download': True}
