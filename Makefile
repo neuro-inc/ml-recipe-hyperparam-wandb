@@ -35,6 +35,7 @@ N_HYPERPARAMETER_JOBS?=3
 # Location of your dataset on the platform storage. Example:
 # DATA_DIR_STORAGE?=storage:datasets/cifar10
 DATA_DIR_STORAGE?=$(PROJECT_PATH_STORAGE)/$(DATA_DIR)
+
 RESULTS_DIR_STORAGE?=$(PROJECT_PATH_STORAGE)/$(RESULTS_DIR)
 RESULTS_DIR_ENV?=$(PROJECT_PATH_ENV)/$(RESULTS_DIR)
 
@@ -169,6 +170,10 @@ upload-notebooks: _check_setup  ### Upload notebooks directory to the platform s
 download-notebooks: _check_setup  ### Download notebooks directory from the platform storage
 	$(NEURO) cp --recursive --update --no-target-directory $(PROJECT_PATH_STORAGE)/$(NOTEBOOKS_DIR) $(NOTEBOOKS_DIR)
 
+.PHONY: download-results
+download-results:  ### Download results directory from the platform storage
+	$(NEURO) cp --recursive --update --no-target-directory $(RESULTS_DIR_STORAGE) $(RESULTS_DIR)
+
 .PHONY: clean-notebooks
 clean-notebooks: _check_setup  ### Delete notebooks directory from the platform storage
 	$(NEURO) rm --recursive $(PROJECT_PATH_STORAGE)/$(NOTEBOOKS_DIR)/*
@@ -258,6 +263,7 @@ train: _check_setup upload-code upload-config   ### Run a training job
 .PHONY: hyper-train
 hyper-train: _check_setup    ### Run jobs in parallel for hyperparameters search using W&B
 	SWEEP_ID="$(shell wandb sweep $(CODE_DIR)/sweep.yaml | grep 'sweep with ID' | cut -d' ' -f5)" ; \
+	echo SWEEP_$$SWEEP_ID ; \
 	SWEEP_RESULTS_DIR_STORAGE=$(RESULTS_DIR_STORAGE)/sweep-$$SWEEP_ID ; \
 	$(NEURO) mkdir $$SWEEP_RESULTS_DIR_STORAGE | true ; \
 	for i_job in $$(seq 1 $(N_HYPERPARAMETER_JOBS)) ; do \

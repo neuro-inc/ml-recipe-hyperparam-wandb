@@ -21,8 +21,9 @@ Additional parameters of search can be set in `src/sweep.yaml` file, see [W&B do
 sweeps](https://docs.wandb.com/library/sweeps) for more details.
 
 
-* Charts with comparisons of runs with different hyperparameters are available 
-through [W&B Web UI](https://app.wandb.ai/home), here you can also find a button for early stop the search
+* Charts and table with comparisons of runs with different hyperparameters are available 
+through [W&B Web UI](https://app.wandb.ai/home) (see `Sweep` section on the left bar).
+Here you can also find a button for early stop the search
 (or you can use `make kill-hyper-train` for this purpose).
 * Training logs and checkpoints can be found in the results directory (see `RESULTS_DIR` in `Makefile`).
 

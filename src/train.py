@@ -6,7 +6,7 @@ from typing import Any, Dict, List
 
 import catalyst.dl.callbacks as clb
 import torchvision.transforms as t
-from catalyst.dl.runner import SupervisedRunner
+from catalyst.dl.runner import SupervisedWandbRunner
 from torch import Tensor
 from torch import device as tdevice
 from torch import nn
@@ -16,8 +16,9 @@ from torch.utils.data import DataLoader
 from torchvision.datasets import CIFAR10
 from torchvision.models import resnet18
 
-DATA_PATH = Path(__file__).parent.parent / 'data'
-LOG_DIR = Path(__file__).parent.parent / 'results'
+ROOT = Path(__file__).absolute().parent.parent
+DATA_PATH = ROOT / 'data'
+LOG_DIR = ROOT / 'results'
 
 
 def get_imagenet_transforms() -> t.Compose:
@@ -82,7 +83,7 @@ def main(args: Namespace) -> None:
     criterion = nn.CrossEntropyLoss()
     optimizer = SGD(params=model.parameters(), lr=args.lr)
 
-    runner = SupervisedRunner(
+    runner = SupervisedWandbRunner(
         input_key='features', input_target_key='targets', output_key=None,
         device=tdevice('cuda:0') if is_available() else tdevice('cpu')
     )
@@ -99,7 +100,7 @@ def main(args: Namespace) -> None:
                  loaders=OrderedDict([('train', train_loader), ('valid', test_loader)]),
                  logdir=logdir, num_epochs=args.n_epoch, verbose=True,
                  main_metric='accuracy01', valid_loader='valid', minimize_metric=False,
-                 monitoring_params={'project': 'neuro_hyper'}, callbacks=callbacks
+                 monitoring_params={'project': 'hyper_search'}, callbacks=callbacks
                  )
 
 
