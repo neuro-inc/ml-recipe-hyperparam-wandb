@@ -31,7 +31,6 @@ def get_imagenet_transforms() -> t.Compose:
 class CifarWrapper:
 
     def __init__(self, **args: Any):
-        print(args)
         self._dataset = CIFAR10(**args)
 
     def __getitem__(self, idx: int) -> Dict[str, Any]:
