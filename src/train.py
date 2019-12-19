@@ -30,7 +30,8 @@ def get_imagenet_transforms() -> t.Compose:
 
 class CifarWrapper:
 
-    def __init__(self, **args: Dict[str, Any]):
+    def __init__(self, **args: Any):
+        print(args)
         self._dataset = CIFAR10(**args)
 
     def __getitem__(self, idx: int) -> Dict[str, Any]:
@@ -57,7 +58,7 @@ class CifarResnet18(nn.Module):
         self._model.fc = nn.Linear(in_features=hide_dim,
                                    out_features=n_classes)
 
-    def forward(self, img_batch: Tensor) -> Dict[str, Tensor]:  # type: ignore
+    def forward(self, img_batch: Tensor) -> Dict[str, Tensor]:
         return {'logits': self._model(img_batch)}
 
 
@@ -71,7 +72,7 @@ def main(args: Namespace) -> None:
 
     loader_args = {'batch_size': args.batch_size, 'num_workers': 4}
 
-    train_loader = DataLoader(dataset=CifarWrapper(train=True, **cifar_args),
+    train_loader = DataLoader(CifarWrapper(train=True, **cifar_args),
                               shuffle=True, **loader_args)
 
     test_loader = DataLoader(CifarWrapper(train=False, **cifar_args),

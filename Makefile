@@ -366,4 +366,4 @@ lint: _check_setup  ### Run static code analysis locally
 
 .PHONY: ps
 ps: _check_setup  ### List all running and pending jobs
-	$(NEURO) ps;
+	$(NEURO) ps

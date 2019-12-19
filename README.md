@@ -19,8 +19,9 @@ which prepares a Docker container with all the necessary dependencies.
 (number of jobs can be specified in `Makefile` or as environment variable).
 Additional parameters of search can be set in `src/sweep.yaml` file, see [W&B documentation about
 sweeps](https://docs.wandb.com/library/sweeps) for more details.
+* `make train` - you can also run single training process with default hyperparameters.
 
-
+Outcomes:
 * Charts and table with comparisons of runs with different hyperparameters are available 
 through [W&B Web UI](https://app.wandb.ai/home) (see `Sweep` section on the left bar).
 Here you can also find a button for early stop the search
