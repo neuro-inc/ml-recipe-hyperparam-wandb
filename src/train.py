@@ -12,6 +12,7 @@ from torch import device as tdevice
 from torch import nn
 from torch.cuda import is_available
 from torch.optim import SGD
+from torch.optim import lr_scheduler
 from torch.utils.data import DataLoader
 from torchvision.datasets import CIFAR10
 from torchvision.models import resnet18
@@ -81,7 +82,24 @@ def main(args: Namespace) -> None:
 
     model = CifarResnet18(n_classes=n_classes)
     criterion = nn.CrossEntropyLoss()
-    optimizer = SGD(params=model.parameters(), lr=args.lr)
+
+    # Optimizer
+    if args.optimizer.lower() == 'sgd':
+        optimizer = SGD(params=model.parameters(), lr=args.lr)
+    elif args.optimizer.lower() == 'adam':
+        optimizer = SGD(params=model.parameters(), lr=args.lr)
+    else:
+        raise ValueError(f'Unexpected optimizer {args.optimizer.lower()}.')
+
+    # Scheduler
+    if args.scheduler.lower() == 'const'.lower():
+        scheduler = None
+    elif args.scheduler.lower() == 'cosine'.lower():
+        scheduler = lr_scheduler.CosineAnnealingLR(
+            optimizer=optimizer, eta_min=1e-5, T_max=args.n_epoch
+        )
+    else:
+        raise ValueError(f'Unexpected optimizer {arg.scheduler.lower()}.')
 
     runner = SupervisedWandbRunner(
         input_key='features', input_target_key='targets', output_key=None,
@@ -98,20 +116,22 @@ def main(args: Namespace) -> None:
     ]
     runner.train(model=model, criterion=criterion, optimizer=optimizer,
                  loaders=OrderedDict([('train', train_loader), ('valid', test_loader)]),
-                 logdir=logdir, num_epochs=args.n_epoch, verbose=True,
+                 logdir=logdir, num_epochs=args.n_epoch, verbose=True, scheduler=scheduler,
                  main_metric='accuracy01', valid_loader='valid', minimize_metric=False,
-                 monitoring_params={'project': 'hyper_search'}, callbacks=callbacks
+                 monitoring_params={'project': 'hyper_search'}, callbacks=callbacks,
                  )
 
 
 def get_parser() -> ArgumentParser:
     parser = ArgumentParser()
     parser.add_argument('--logdir', type=Path, default=LOG_DIR)
+    parser.add_argument('--n_epoch', type=int, default=30)
+    parser.add_argument('--batch_size', type=int, default=256)
 
     # args which can be optimized
-    parser.add_argument('--n_epoch', type=int, default=10)
-    parser.add_argument('--lr', type=float, default=1e-2)
-    parser.add_argument('--batch_size', type=int, default=256)
+    parser.add_argument('--lr', type=float, default=1e-2, help='base learning rate.')
+    parser.add_argument('--scheduler', type=str, default='const')  # 'cosine' or 'const'
+    parser.add_argument('--optimizer', type=str, default='sgd')  # 'sgd' or 'adam'
 
     return parser
 

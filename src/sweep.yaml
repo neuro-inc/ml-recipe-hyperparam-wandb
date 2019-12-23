@@ -4,9 +4,9 @@ metric:
   name: accuracy01/valid
   goal: maximize
 parameters:
-  n_epoch:
-    values: [10, 25]
   lr:
     values: [0.1, 0.01, 0.001]
-  batch_size:
-    values: [64, 256]
+  optimizer:
+    values: ['sgd', 'adam']
+  scheduler:
+    values: ['const', 'cosine']
