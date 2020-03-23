@@ -1,4 +1,6 @@
 .idea*
+wandb/*
+*.DS_Store*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -130,4 +132,4 @@ dmypy.json
 
 # config/ folder
 /config/**/*
-
+*.setup_done*

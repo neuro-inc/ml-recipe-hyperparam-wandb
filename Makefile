@@ -30,9 +30,14 @@ CUSTOM_ENV_NAME?=image:neuromation-$(PROJECT_POSTFIX)
 
 ##### VARIABLES YOU MAY WANT TO MODIFY #####
 
+N_HYPERPARAMETER_JOBS?=3
+
 # Location of your dataset on the platform storage. Example:
 # DATA_DIR_STORAGE?=storage:datasets/cifar10
 DATA_DIR_STORAGE?=$(PROJECT_PATH_STORAGE)/$(DATA_DIR)
+
+RESULTS_DIR_STORAGE?=$(PROJECT_PATH_STORAGE)/$(RESULTS_DIR)
+RESULTS_DIR_ENV?=$(PROJECT_PATH_ENV)/$(RESULTS_DIR)
 
 # The type of the training machine (run `neuro config show` to see the list of available types).
 PRESET?=gpu-small
@@ -43,8 +48,9 @@ PRESET?=gpu-small
 HTTP_AUTH?=--http-auth
 
 # Command to run training inside the environment. Example:
-# TRAINING_COMMAND="bash -c 'cd $(PROJECT_PATH_ENV) && python -u $(CODE_DIR)/train.py --data $(DATA_DIR)'"
-TRAINING_COMMAND?='echo "Replace this placeholder with a training script execution"'
+# --no-wait-start / -wait-start
+WAITING_TRAINING_JOB_START=--wait-start
+TRAINING_COMMAND="bash -c 'cd $(PROJECT_PATH_ENV) && python -u $(CODE_DIR)/train.py'"
 
 LOCAL_PORT?=2211
 
@@ -144,6 +150,10 @@ upload-data: _check_setup  ### Upload data directory to the platform storage
 clean-data: _check_setup  ### Delete data directory from the platform storage
 	$(NEURO) rm --recursive $(DATA_DIR_STORAGE)/*
 
+.PHONY: clean-results
+clean-results: _check_setup ### Delete results directory from the platform storage
+	$(NEURO) rm --recursive $(RESULTS_DIR_STORAGE)/*
+
 .PHONY: upload-config
 upload-config: _check_setup  ### Upload config directory to the platform storage
 	$(NEURO) cp --recursive --update --no-target-directory $(CONFIG_DIR) $(PROJECT_PATH_STORAGE)/$(CONFIG_DIR)
@@ -159,6 +169,10 @@ upload-notebooks: _check_setup  ### Upload notebooks directory to the platform s
 .PHONY: download-notebooks
 download-notebooks: _check_setup  ### Download notebooks directory from the platform storage
 	$(NEURO) cp --recursive --update --no-target-directory $(PROJECT_PATH_STORAGE)/$(NOTEBOOKS_DIR) $(NOTEBOOKS_DIR)
+
+.PHONY: download-results
+download-results:  ### Download results directory from the platform storage
+	$(NEURO) cp --recursive --update --no-target-directory $(RESULTS_DIR_STORAGE) $(RESULTS_DIR)
 
 .PHONY: clean-notebooks
 clean-notebooks: _check_setup  ### Delete notebooks directory from the platform storage
@@ -203,7 +217,7 @@ develop: upload-code upload-config upload-notebooks  ### Run a development job
 		--volume $(DATA_DIR_STORAGE):$(PROJECT_PATH_ENV)/$(DATA_DIR):ro \
 		--volume $(PROJECT_PATH_STORAGE)/$(CODE_DIR):$(PROJECT_PATH_ENV)/$(CODE_DIR):rw \
 		--volume $(PROJECT_PATH_STORAGE)/$(CONFIG_DIR):$(PROJECT_PATH_ENV)/$(CONFIG_DIR):ro \
-		--volume $(PROJECT_PATH_STORAGE)/$(RESULTS_DIR):$(PROJECT_PATH_ENV)/$(RESULTS_DIR):rw \
+		--volume $(RESULTS_DIR_STORAGE):$(RESULTS_DIR_ENV):rw \
 		${OPTION_GCP_CREDENTIALS} \
 		${OPTION_WANDB_CREDENTIALS} \
 		--env EXPOSE_SSH=yes \
@@ -231,12 +245,13 @@ kill-develop:  ### Terminate the development job
 .PHONY: train
 train: _check_setup upload-code upload-config   ### Run a training job
 	$(NEURO) run \
+	    $(WAITING_TRAINING_JOB_START) \
 		--name $(TRAINING_JOB) \
 		--preset $(PRESET) \
-		--volume $(DATA_DIR_STORAGE):$(PROJECT_PATH_ENV)/$(DATA_DIR):ro \
+		--volume $(DATA_DIR_STORAGE):$(PROJECT_PATH_ENV)/$(DATA_DIR):rw \
 		--volume $(PROJECT_PATH_STORAGE)/$(CODE_DIR):$(PROJECT_PATH_ENV)/$(CODE_DIR):ro \
 		--volume $(PROJECT_PATH_STORAGE)/$(CONFIG_DIR):$(PROJECT_PATH_ENV)/$(CONFIG_DIR):ro \
-		--volume $(PROJECT_PATH_STORAGE)/$(RESULTS_DIR):$(PROJECT_PATH_ENV)/$(RESULTS_DIR):rw \
+		--volume $(RESULTS_DIR_STORAGE):$(RESULTS_DIR_ENV):rw \
 		${OPTION_GCP_CREDENTIALS} \
 		${OPTION_WANDB_CREDENTIALS} \
 		--env PYTHONPATH=$(PROJECT_PATH_ENV) \
@@ -245,9 +260,30 @@ train: _check_setup upload-code upload-config   ### Run a training job
 		$(CUSTOM_ENV_NAME) \
 		$(TRAINING_COMMAND)
 
+.PHONY: hyper-train
+hyper-train: _check_setup    ### Run jobs in parallel for hyperparameters search using W&B
+	SWEEP_ID="$(shell wandb sweep $(CODE_DIR)/sweep.yaml | grep 'sweep with ID' | cut -d' ' -f5)" ; \
+	echo SWEEP_$$SWEEP_ID ; \
+	SWEEP_RESULTS_DIR_STORAGE=$(RESULTS_DIR_STORAGE)/sweep-$$SWEEP_ID ; \
+	$(NEURO) mkdir $$SWEEP_RESULTS_DIR_STORAGE | true ; \
+	for i_job in $$(seq 1 $(N_HYPERPARAMETER_JOBS)) ; do \
+        echo "Starting job #"$$i_job ; \
+        make train \
+            TRAINING_COMMAND="\"bash -c 'cd $(PROJECT_PATH_ENV)/$(CODE_DIR) && wandb agent $$SWEEP_ID'\"" \
+            TRAINING_JOB=$(TRAINING_JOB)-$$i_job \
+            WAITING_TRAINING_JOB_START=--no-wait-start \
+            RESULTS_DIR_STORAGE=$$SWEEP_RESULTS_DIR_STORAGE; \
+    done
+
 .PHONY: kill-train
 kill-train: _check_setup  ### Terminate the training job
 	$(NEURO) kill $(TRAINING_JOB)
+
+.PHONY: kill-hyper-train
+kill-hyper-train:  ### Terminate jobs runned for hyper parameters search
+	for i_job in $$(seq 1 $(N_HYPERPARAMETER_JOBS)) ; do \
+	    make kill-train TRAINING_JOB=$(TRAINING_JOB)-$$i_job ; \
+	done
 
 .PHONY: connect-train
 connect-train: _check_setup  ### Connect to the remote shell running on the training job
@@ -270,7 +306,7 @@ jupyter: _check_setup upload-config upload-code upload-notebooks ### Run a job w
 		--volume $(PROJECT_PATH_STORAGE)/$(CODE_DIR):$(PROJECT_PATH_ENV)/$(CODE_DIR):rw \
 		--volume $(PROJECT_PATH_STORAGE)/$(CONFIG_DIR):$(PROJECT_PATH_ENV)/$(CONFIG_DIR):ro \
 		--volume $(PROJECT_PATH_STORAGE)/$(NOTEBOOKS_DIR):$(PROJECT_PATH_ENV)/$(NOTEBOOKS_DIR):rw \
-		--volume $(PROJECT_PATH_STORAGE)/$(RESULTS_DIR):$(PROJECT_PATH_ENV)/$(RESULTS_DIR):rw \
+		--volume $(RESULTS_DIR_STORAGE):$(RESULTS_DIR_ENV):rw \
 		$(CUSTOM_ENV_NAME) \
 		'jupyter notebook --no-browser --ip=0.0.0.0 --allow-root --NotebookApp.token= --notebook-dir=$(PROJECT_PATH_ENV)'
 
@@ -287,9 +323,9 @@ tensorboard: _check_setup  ### Run a job with TensorBoard and open UI in the def
 		$(HTTP_AUTH) \
 		--browse \
 		--env JOB_TIMEOUT=1d \
-		--volume $(PROJECT_PATH_STORAGE)/$(RESULTS_DIR):$(PROJECT_PATH_ENV)/$(RESULTS_DIR):ro \
+		--volume $(RESULTS_DIR_STORAGE):$(RESULTS_DIR_ENV):ro \
 		$(CUSTOM_ENV_NAME) \
-		'tensorboard --host=0.0.0.0 --logdir=$(PROJECT_PATH_ENV)/$(RESULTS_DIR)'
+		'tensorboard --host=0.0.0.0 --logdir=$(RESULTS_DIR_ENV)'
 
 .PHONY: kill-tensorboard
 kill-tensorboard: _check_setup  ### Terminate the job with TensorBoard
@@ -313,7 +349,7 @@ kill-filebrowser: _check_setup  ### Terminate the job with File Browser
 	$(NEURO) kill $(FILEBROWSER_JOB)
 
 .PHONY: kill-all
-kill-all: kill-train kill-jupyter kill-tensorboard kill-filebrowser  ### Terminate all jobs of this project
+kill-all: kill-train kill-hyper-train kill-jupyter kill-tensorboard kill-filebrowser  ### Terminate all jobs of this project
 
 ##### LOCAL #####
 
