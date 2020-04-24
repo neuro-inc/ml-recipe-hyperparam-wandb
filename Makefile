@@ -67,7 +67,7 @@ TRAIN_STREAM_LOGS?=yes
 
 # Command to run training inside the environment:
 #   make train TRAIN_CMD="python ./train.py"
-TRAIN_CMD?=python -u $(CODE_DIR)/train.py --data $(DATA_DIR)
+TRAIN_CMD?=python -u $(CODE_DIR)/train.py
 
 # Postfix of training jobs:
 #   make train RUN=experiment-2
@@ -378,7 +378,7 @@ train: _check_setup upload-code upload-config   ### Run a training job (set up e
 		--preset $(PRESET) \
 		--detach \
 		$(TRAIN_WAIT_START_OPTION) \
-		--volume $(DATA_DIR_STORAGE):$(PROJECT_PATH_ENV)/$(DATA_DIR):ro \
+		--volume $(DATA_DIR_STORAGE):$(PROJECT_PATH_ENV)/$(DATA_DIR):rw \
 		--volume $(PROJECT_PATH_STORAGE)/$(CODE_DIR):$(PROJECT_PATH_ENV)/$(CODE_DIR):ro \
 		--volume $(PROJECT_PATH_STORAGE)/$(CONFIG_DIR):$(PROJECT_PATH_ENV)/$(CONFIG_DIR):ro \
 		--volume $(PROJECT_PATH_STORAGE)/$(RESULTS_DIR):$(PROJECT_PATH_ENV)/$(RESULTS_DIR):rw \

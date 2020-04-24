@@ -92,9 +92,9 @@ def main(args: Namespace) -> None:
         raise ValueError(f'Unexpected optimizer {args.optimizer.lower()}.')
 
     # Scheduler
-    if args.scheduler.lower() == 'const'.lower():
+    if args.scheduler.lower() == 'const':
         scheduler = None
-    elif args.scheduler.lower() == 'cosine'.lower():
+    elif args.scheduler.lower() == 'cosine':
         scheduler = lr_scheduler.CosineAnnealingLR(
             optimizer=optimizer, eta_min=1e-5, T_max=args.n_epoch
         )
