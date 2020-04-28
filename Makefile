@@ -429,7 +429,7 @@ hypertrain: _check_setup wandb-check-auth   ### Run jobs in parallel for hyperpa
 			--tag "target:hypertrain" --tag "target:train" --tag "wandb-sweep:$$sweep" $(_PROJECT_TAGS) \
 			--preset $(PRESET) \
 			--detach \
-			--volume $(DATA_DIR_STORAGE):$(PROJECT_PATH_ENV)/$(DATA_DIR):ro \
+			--volume $(DATA_DIR_STORAGE):$(PROJECT_PATH_ENV)/$(DATA_DIR):rw \
 			--volume $(PROJECT_PATH_STORAGE)/$(CODE_DIR):$(PROJECT_PATH_ENV)/$(CODE_DIR):ro \
 			--volume $(PROJECT_PATH_STORAGE)/$(CONFIG_DIR):$(PROJECT_PATH_ENV)/$(CONFIG_DIR):ro \
 			--volume $(PROJECT_PATH_STORAGE)/sweep-$$sweep:$(PROJECT_PATH_ENV)/sweep-$$sweep:rw \
