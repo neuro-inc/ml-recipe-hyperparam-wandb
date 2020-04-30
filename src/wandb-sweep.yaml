@@ -1,4 +1,4 @@
-program: train.py
+program: /project/src/train.py
 method: grid
 metric:
   name: accuracy01/valid
@@ -10,3 +10,4 @@ parameters:
     values: ['sgd', 'adam']
   scheduler:
     values: ['const', 'cosine']
+
