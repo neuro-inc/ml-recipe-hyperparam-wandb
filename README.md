@@ -10,12 +10,12 @@ from [CIFAR10](https://www.cs.toronto.edu/~kriz/cifar.html) dataset.
 
 ### Steps to run
 * `make setup` - Before we start doing something, we have to run the command, which prepares a Docker container with all the necessary dependencies.
-* Installing `W&B` and configuring its credentials.
+* Installing `W&B` and configuring its credentials (see our [guide](https://docs.neu.ro/toolbox/experiment-tracking-with-weights-and-biases#authenticating-w-and-b)).
 * `make hypertrain`- Run `N_JOBS` jobs on our platform
 (number of jobs can be specified in `Makefile` or as environment variable). Additional parameters of tuning you can set in `src/wandb-sweep.yaml` file; see [W&B documentation about
 sweeps](https://docs.wandb.com/library/sweeps) for more details.
 * `make train` - Run a single training process with default hyperparameters.
 
-Outcomes:
+### Outcomes
 * Charts and a table with comparisons of runs with different hyperparameters in [W&B Web UI](https://app.wandb.ai/home) (see `Sweep` section on the left bar). There you can also find a button for early stop the search (or you can use `make kill-hypertrain` for this purpose).
 * Training logs and checkpoints you can found in the `results` directory (see `RESULTS_DIR` in `Makefile`).
