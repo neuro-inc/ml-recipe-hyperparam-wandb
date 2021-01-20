@@ -10,7 +10,7 @@ from [CIFAR10](https://www.cs.toronto.edu/~kriz/cifar.html) dataset.
 
 ## Steps to run
 
-* `neuro-flow build myimage` - Before we start doing something, we have to run the command, which prepares a Docker container with all the necessary dependencies.
+* `neuro-flow build myimage` - Before we start doing something, we have to run the command, which builds a Docker container image with all the necessary dependencies.
 * Installing `W&B` and configuring its credentials (see our [guide](https://docs.neu.ro/toolbox/experiment-tracking-with-weights-and-biases#authenticating-w-and-b)).
 * `neuro-flow bake hypertrain --param token $(cat ~/$WANDB_SECRET_FILE)`- Run 2 jobs on our platform
 (number of jobs can be specified in `.neuro/hypertrain.yml`). Additional parameters of tuning you can set in `config/wandb-sweep.yaml` file; see [W&B documentation about
