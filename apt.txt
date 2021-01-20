@@ -3,4 +3,3 @@ libsm6
 libxext6
 libxrender-dev
 ffmpeg
-libgl1-mesa-gl

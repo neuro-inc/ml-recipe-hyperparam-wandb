@@ -1,5 +1,11 @@
 kind: batch
 
+defaults:
+  env:
+    WANDB_PROJECT: ml-recipe-hyper-search
+  cache:
+    strategy: "none"
+
 params:
   token:
     descr: W&B auth token
@@ -9,8 +15,8 @@ volumes:
     remote: storage:$[[ flow.project_id ]]/data
     mount: /project/data
   code:
-    remote: storage:$[[ flow.project_id ]]/src
-    mount: /project/code
+    remote: storage:$[[ flow.project_id ]]/code
+    mount: /project/src
   config:
     remote: storage:$[[ flow.project_id ]]/config
     mount: /project/config
@@ -28,9 +34,6 @@ volumes:
 images:
   myimage:
     ref: image:$[[ flow.project_id ]]
-    dockerfile: $[[ flow.workspace ]]/Dockerfile
-    context: $[[ flow.workspace ]]/
-    build_preset: cpu-small   
 
 tasks:
   - id: start_sweep
@@ -39,11 +42,14 @@ tasks:
     volumes:
       - $[[ volumes.config.ref ]]
       - $[[ volumes.project.ref ]]
+    env:
+      WANDB_SWEEPS_FILE: "$[[ volumes.config.mount ]]/wandb-sweep.yaml"
     bash: |
       wandb login $[[ params.token ]]
-      WANDB_SWEEPS_FILE="$[[ volumes.config.mount ]]/wandb-sweep.yaml"
-      SWEEP=$(WANDB_PROJECT=ml-recipe-hyper-search wandb sweep $WANDB_SWEEPS_FILE 2>&1 | grep 'sweep with ID:' | cut -d' ' -f6)
-      echo ::set-output name=sweep::${SWEEP}
+      SWEEP=$(wandb sweep $WANDB_SWEEPS_FILE 2>&1 | grep -Po '(sweep with ID: )\K(\w+)')
+      USERNAME=$(wandb login 2>&1| grep -Po '(Currently logged in as: )\K(\w+)')
+      echo ::set-output name=sweep::$SWEEP
+      echo ::set-output name=username::$USERNAME
 
   - id: worker_$[[ matrix.id ]]
     image: $[[ images.myimage.ref ]]
@@ -61,4 +67,4 @@ tasks:
       - $[[ volumes.project.ref ]]
     bash: |
       wandb login $[[ params.token ]]
-      export WANDB_PROJECT=ml-recipe-hyper-search && cd $[[ volumes.project.mount ]] && wandb status && wandb agent $[[ needs.start_sweep.outputs.sweep ]]
+      cd $[[ volumes.project.mount ]] && wandb agent -e "$[[ needs.start_sweep.outputs.username ]]" "$[[ needs.start_sweep.outputs.sweep ]]"

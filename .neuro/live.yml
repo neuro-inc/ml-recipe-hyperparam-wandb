@@ -12,7 +12,7 @@ volumes:
   code:
     remote: storage:$[[ flow.project_id ]]/code
     mount: /project/code
-    local: code
+    local: src
   config:
     remote: storage:$[[ flow.project_id ]]/config
     mount: /project/config
