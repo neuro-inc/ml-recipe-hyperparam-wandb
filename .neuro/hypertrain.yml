@@ -7,8 +7,8 @@ defaults:
     strategy: "none"
 
 params:
-  token:
-    descr: W&B auth token
+  token_secret_name:
+    descr: The platform secret name, where W&B auth token is stored.
 
 volumes:
   data:
@@ -44,8 +44,8 @@ tasks:
       - $[[ volumes.project.ref ]]
     env:
       WANDB_SWEEPS_FILE: "$[[ volumes.config.mount ]]/wandb-sweep.yaml"
+      WANDB_API_KEY: secret:$[[ params.token_secret_name ]]
     bash: |
-      wandb login $[[ params.token ]]
       SWEEP=$(wandb sweep $WANDB_SWEEPS_FILE 2>&1 | grep -Po '(sweep with ID: )\K(\w+)')
       USERNAME=$(wandb login 2>&1| grep -Po '(Currently logged in as: )\K(\w+)')
       echo ::set-output name=sweep::$SWEEP
@@ -65,6 +65,7 @@ tasks:
       - $[[ volumes.notebooks.ref ]]
       - $[[ volumes.results.ref ]]
       - $[[ volumes.project.ref ]]
+    env:
+      WANDB_API_KEY: secret:$[[ params.token_secret_name ]]
     bash: |
-      wandb login $[[ params.token ]]
       cd $[[ volumes.project.mount ]] && wandb agent -e "$[[ needs.start_sweep.outputs.username ]]" "$[[ needs.start_sweep.outputs.sweep ]]"
