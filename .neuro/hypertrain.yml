@@ -1,0 +1,71 @@
+kind: batch
+
+defaults:
+  env:
+    WANDB_PROJECT: ml-recipe-hyper-search
+  cache:
+    strategy: "none"
+
+params:
+  token_secret_name:
+    descr: The platform secret name, where W&B auth token is stored.
+
+volumes:
+  data:
+    remote: storage:$[[ flow.project_id ]]/data
+    mount: /project/data
+  code:
+    remote: storage:$[[ flow.project_id ]]/code
+    mount: /project/src
+  config:
+    remote: storage:$[[ flow.project_id ]]/config
+    mount: /project/config
+    read_only: True
+  notebooks:
+    remote: storage:$[[ flow.project_id ]]/notebooks
+    mount: /project/notebooks
+  results:
+    remote: storage:$[[ flow.project_id ]]/results
+    mount: /project/results
+  project:
+    remote: storage:$[[ flow.project_id ]]
+    mount: /project
+
+images:
+  myimage:
+    ref: image:$[[ flow.project_id ]]
+
+tasks:
+  - id: start_sweep
+    image: $[[ images.myimage.ref ]]
+    preset: cpu-small
+    volumes:
+      - $[[ volumes.config.ref ]]
+      - $[[ volumes.project.ref ]]
+    env:
+      WANDB_SWEEPS_FILE: "$[[ volumes.config.mount ]]/wandb-sweep.yaml"
+      WANDB_API_KEY: secret:$[[ params.token_secret_name ]]
+    bash: |
+      SWEEP=$(wandb sweep $WANDB_SWEEPS_FILE 2>&1 | grep -Po '(sweep with ID: )\K(\w+)')
+      USERNAME=$(wandb login 2>&1| grep -Po '(Currently logged in as: )\K(\w+)')
+      echo ::set-output name=sweep::$SWEEP
+      echo ::set-output name=username::$USERNAME
+
+  - id: worker_$[[ matrix.id ]]
+    image: $[[ images.myimage.ref ]]
+    preset: gpu-k80-small-p
+    needs: [start_sweep]
+    strategy:
+      matrix:
+        id: [1, 2]
+    volumes:
+      - $[[ volumes.data.ref ]]
+      - $[[ volumes.code.ref ]]
+      - $[[ volumes.config.ref ]]
+      - $[[ volumes.notebooks.ref ]]
+      - $[[ volumes.results.ref ]]
+      - $[[ volumes.project.ref ]]
+    env:
+      WANDB_API_KEY: secret:$[[ params.token_secret_name ]]
+    bash: |
+      cd $[[ volumes.project.mount ]] && wandb agent -e "$[[ needs.start_sweep.outputs.username ]]" "$[[ needs.start_sweep.outputs.sweep ]]"
