@@ -1,6 +1,6 @@
 # Multithreaded hyperparameter tuning
 
-In this project, we show how you can quickly run a parallel hyperparameter tuning using the [Neu.ro](https://neu.ro/platform/) platform. As a benchmark, we solve a simple task of classifying images 
+In this project, we show how you can quickly run a parallel hyperparameter tuning using the [Neu.ro](https://neu.ro/) platform. As a benchmark, we solve a simple task of classifying images 
 from [CIFAR10](https://www.cs.toronto.edu/~kriz/cifar.html) dataset.
 
 ## Used technologies
